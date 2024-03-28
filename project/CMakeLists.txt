@@ -13,6 +13,12 @@ FetchContent_Declare(libgps
 FetchContent_MakeAvailable(libgps)
 add_subdirectory(${libgps_SOURCE_DIR}/src)
 
+FetchContent_Declare(lsm6ds3tr
+    GIT_REPOSITORY https://github.com/STMicroelectronics/LSM6DS3TR-C-PID.git
+)
+
+FetchContent_MakeAvailable(lsm6ds3tr)
+
 FetchContent_Declare(freertos
     GIT_REPOSITORY https://github.com/freertos/freertos-kernel.git
     GIT_TAG V11.0.1)
@@ -22,6 +28,7 @@ set(FREERTOS_PORT GCC_RP2040)
 FetchContent_Populate(freertos)
 set(FREERTOS_KERNEL_PATH ${freertos_SOURCE_DIR})
 include(${FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kernel_import.cmake)
+
 
 message(VERSION_REVISION="${PICO_SDK_VERSION_REVISION}")
 
@@ -37,12 +44,16 @@ add_executable(${PROJECT_NAME}
     main.c
     gps_task.c
     i2c_support.c
+    sensors.c
+    ${lsm6ds3tr_SOURCE_DIR}/lsm6ds3tr-c_reg.c
     )
 
     # if the PIO is used, this is how to do it.
 # pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/switch_inputs.pio)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    ${CMAKE_CURRENT_LIST_DIR} 
+    ${lsm6ds3tr_SOURCE_DIR})
 
 target_link_libraries(${PROJECT_NAME}
     pico_stdlib
@@ -53,6 +64,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_uart
     hardware_gpio
     hardware_i2c
+    hardware_spi
     hardware_adc
     libgps
 )

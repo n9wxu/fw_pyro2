@@ -35,6 +35,7 @@
             "interface": "swd",
             "device": "RP2040",
             "BMPGDBSerialPort": "/dev/cu.usbmodem81C6867B1", // Use whatever serial port makes sense for your OS and BMP setup
+            "powerOverBMP": "enable",
         },
         {
             "name": "BMP Debug",
@@ -48,6 +49,7 @@
             "interface": "swd",
             "device": "RP2040",
             "BMPGDBSerialPort": "/dev/cu.usbmodem81C6867B1", // Use whatever serial port makes sense for your OS and BMP setup
+            "powerOverBMP": "enable",
             "runToEntryPoint": "main"
         }
     ]

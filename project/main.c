@@ -24,6 +24,7 @@ int main() {
   i2c_sensorInit();
 
   init_gps();
+  sensors_init();
 
   vTaskStartScheduler();
 }
