@@ -82,6 +82,7 @@ static void gps_task(void *parameter) {
     nmea_buffer_t nmea_message = {0};
     if (xQueueReceive(gpsQueue, &nmea_message, pdMS_TO_TICKS(2000)) == pdTRUE) {
       strncat(nmea_message, "\r\n", 3);
+      printf("%s", nmea_message);
       int gps_error = gps_decode(&tpv, nmea_message);
       if (GPS_OK == gps_error) {
         switch (tpv.mode) {

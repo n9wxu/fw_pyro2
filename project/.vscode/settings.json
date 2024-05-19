@@ -7,5 +7,5 @@
     "githubPullRequests.ignoredPullRequestBranches": [
         "master"
     ],
-    "cortex-debug.variableUseNaturalFormat": true
+    "cortex-debug.variableUseNaturalFormat": false
 }

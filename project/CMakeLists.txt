@@ -40,16 +40,17 @@ pico_sdk_init()
 
 add_definitions(-DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=5000)
 
-add_executable(${PROJECT_NAME}
+add_executable(${CMAKE_PROJECT_NAME}
     main.c
     gps_task.c
     i2c_support.c
     sensors.c
+    spi_drv.c
+    pio_spi.c
     ${lsm6ds3tr_SOURCE_DIR}/lsm6ds3tr-c_reg.c
     )
 
-    # if the PIO is used, this is how to do it.
-# pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/switch_inputs.pio)
+pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/spi.pio)
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${CMAKE_CURRENT_LIST_DIR} 

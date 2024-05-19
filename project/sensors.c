@@ -19,6 +19,8 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
                              uint16_t len);
 static void platform_delay(uint32_t ms);
 
+extern void my_spi_init();
+
 static void worker(void *parameter) {
 
   static int16_t data_raw_acceleration[3];
@@ -30,31 +32,30 @@ static void worker(void *parameter) {
   static uint8_t tx_buffer[1000] = {0};
 
   gpio_init(IMU_CS);
-  gpio_set_dir(IMU_CS, true);
-  gpio_put(IMU_CS, true);
-
   gpio_init(ALTIMETER_CS);
+  gpio_init(SCK0);
+  gpio_init(SDO0);
+  gpio_init(SDI0);
+
+  gpio_set_dir(IMU_CS, true);
   gpio_set_dir(ALTIMETER_CS, true);
+  gpio_set_dir(SCK0, true);
+  gpio_set_dir(SDI0, true);
+  gpio_set_dir(SDO0, false);
+  gpio_set_pulls(SDO0, true, false);
+
+  gpio_put(IMU_CS, true);
   gpio_put(ALTIMETER_CS, true);
+  gpio_put(SCK0, true);
 
-  spi_init(spi1, 100000);
-  gpio_set_function(SCK1, GPIO_FUNC_SPI);
-  gpio_set_function(SDO1, GPIO_FUNC_SPI);
-  gpio_set_function(SDI1, GPIO_FUNC_SPI);
-  bi_decl(bi_3pins_with_func(SDI1, SDO1, SCK1, GPIO_FUNC_SPI));
-  bi_decl(bi_1pin_with_name(IMU_CS, "IMU SPI CS"));
-  bi_decl(bi_1pin_with_name(ALTIMETER_CS, "Altimeter SPI CS"));
-
-  spi_set_format(spi1, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
-  spi_write_blocking(spi1, tx_buffer,
-                     1); // dummy write to force the SDO to idle high
+  my_spi_init();
 
   /* Initialize mems driver interface */
   stmdev_ctx_t dev_ctx;
   dev_ctx.write_reg = platform_write;
   dev_ctx.read_reg = platform_read;
   dev_ctx.mdelay = platform_delay;
-  dev_ctx.handle = spi1;
+  dev_ctx.handle = spi0;
 
   vTaskDelay(pdMS_TO_TICKS(20));
 
@@ -142,7 +143,27 @@ static void worker(void *parameter) {
   }
 }
 
-void sensors_init(void) { xTaskCreate(worker, "Sensors", 4096, NULL, 5, NULL); }
+void sensors_init(void) {
+  xTaskCreate(worker, "Sensors", 4096, NULL, 25, NULL);
+}
+
+uint8_t bb_spi_xchg(uint8_t s) {
+  uint8_t r;
+  printf("BB send 0x%02X : ", s);
+  for (int x = 0x080; x != 0; x >>= 1) {
+    gpio_put(SCK0, false);
+    asm volatile("nop \n nop \n nop");
+    gpio_put(SDI0, (s & x) ? true : false);
+    asm volatile("nop \n nop \n nop");
+    gpio_put(SCK0, true);
+    asm volatile("nop \n nop \n nop");
+    uint8_t v = gpio_get(SDO0) ? x : 0;
+    asm volatile("nop \n nop \n nop");
+    r |= v;
+  }
+  printf("0x%02X\n", r);
+  return r;
+}
 
 /*
  * @brief  Write generic device register (platform dependent)
@@ -161,8 +182,10 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
   asm volatile("nop \n nop \n nop");
   gpio_put(IMU_CS, false);
   asm volatile("nop \n nop \n nop");
-  spi_write_blocking(spi, &reg, 1);
-  spi_write_blocking(spi, bufp, len);
+  bb_spi_xchg(reg);
+  for (int x = 0; x < len; x++) {
+    bb_spi_xchg(bufp[x]);
+  }
   asm volatile("nop \n nop \n nop");
   gpio_put(IMU_CS, true);
   asm volatile("nop \n nop \n nop");
@@ -185,8 +208,12 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
   asm volatile("nop \n nop \n nop");
   gpio_put(IMU_CS, false);
   asm volatile("nop \n nop \n nop");
-  spi_write_blocking(spi, &reg, 1);
-  spi_read_blocking(spi, 0, bufp, len);
+  bb_spi_xchg(reg);
+  for (int x = 0; x < len; x++) {
+    bufp[x] = bb_spi_xchg(0);
+  }
+  //   spi_write_blocking(spi, &reg, 1);
+  //   spi_read_blocking(spi, 0, bufp, len);
   asm volatile("nop \n nop \n nop");
   gpio_put(IMU_CS, true);
   asm volatile("nop \n nop \n nop");
